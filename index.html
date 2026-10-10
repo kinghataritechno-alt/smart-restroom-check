@@ -115,6 +115,13 @@ textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(
 .thumb{width:72px;height:72px;border-radius:10px;object-fit:cover;flex:none;background:var(--surface2);border:1px solid var(--line)}
 .ph{width:72px;height:72px;border-radius:10px;flex:none;display:grid;place-items:center;text-align:center;font-size:12.5px;color:var(--muted);background:repeating-linear-gradient(45deg,var(--surface2) 0 6px,var(--line) 6px 7px);border:1px solid var(--line)}
 .warnbox{background:var(--bad-soft);color:var(--bad);border-radius:10px;padding:10px 12px;font-size:16px}
+.datebar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.datebar.past{border-color:var(--warn);background:var(--warn-soft)}
+.datebar label{font-size:15px;color:var(--muted);white-space:nowrap}
+.datebar input{font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:6px 8px;flex:1;min-width:0}
+.datebar .btn{white-space:nowrap}
+.pastnote{color:var(--warn);font-size:15px;font-weight:500;margin-top:-6px}
+.fg td.cell.tap{cursor:pointer}
 .okbox{background:var(--ok-soft);color:var(--ok);border-radius:10px;padding:10px 12px;font-size:16px}
 .err{color:var(--bad);font-size:15px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:16px;z-index:30;max-width:90%}
@@ -351,6 +358,8 @@ const STLBL={pending:'ยังไม่ตรวจ',passed:'ผ่าน',fail
 const failLine=x=>(x.issues||[]).map(i=>ITEMLBL[i.item]).join(', ');
 const chip=st=>`<span class="chip c-${st}">${STLBL[st]}</span>`;
 const pct=(a,b)=>b?Math.round(a*100/b):0;
+const PASTV=()=>LIVE&&!!S.viewDate; // กำลังดูข้อมูลย้อนหลัง = ดูได้อย่างเดียว
+const canDo=f=>!PASTV()&&(S.role==='mgr'||!!myHead().has(f));
 const staffBlock=f=>staffOn(f).map(x=>`<div><span class="num muted">${x.code}</span> <b>${esc(x.first)}</b> ${esc(x.last)}</div>`).join('');
 
 // ================== render ==================
@@ -360,12 +369,12 @@ function render(){
   else if(S.page==='home'){
     html=`<div class="co-bar"><span class="co-logo"><img src="${LOGO}" alt="โลโก้ Smart Terminal"></span><span class="co-name"><b>Smart Terminal</b><small>SMART TERMINAL CORPORATION CO.,LTD.</small></span>${themeBtn()}</div>
     <div class="top"><div class="brand"><small>งานบริหารอาคารสำนักงานงบประมาณ/งานทำความสะอาด</small><h1>Smart Restroom Check</h1><div class="today-line" id="today-line">${todayLine()}</div></div>${LIVE?'':'<span class="sample">ข้อมูลตัวอย่าง</span>'}</div>
-    ${LIVE?liveBar():`<div class="seg two" role="group" aria-label="เลือกผู้ใช้งาน">
+    ${LIVE?liveBar()+dateBar():`<div class="seg two" role="group" aria-label="เลือกผู้ใช้งาน">
       <button data-act="role" data-v="sup" aria-pressed="${S.role==='sup'}">หัวหน้าแม่บ้าน</button>
       <button data-act="role" data-v="mgr" aria-pressed="${S.role==='mgr'}">ผู้จัดการ${S.mgrAuth?'':' 🔒'}</button></div>`}
     ${viewHome()}`;
   } else {
-    const body=(LIVE&&['weekly','monthly','kpi'].includes(S.page)?liveNotice:'')+{check:viewCheck,daily:mgrToday,weekly:viewWeekly,monthly:mgrMonth,supply:viewSupply,staff:viewStaff,kpi:viewKpi,other:viewOther,pin:viewPin}[S.page]();
+    const body=(['check','daily','other'].includes(S.page)?dateBar():'')+(LIVE&&['weekly','monthly','kpi'].includes(S.page)?liveNotice:'')+{check:viewCheck,daily:mgrToday,weekly:viewWeekly,monthly:mgrMonth,supply:viewSupply,staff:viewStaff,kpi:viewKpi,other:viewOther,pin:viewPin}[S.page]();
     html=`<div class="nav"><button class="back" data-act="home" aria-label="กลับหน้าแรก"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>หน้าแรก</button><div class="nav-t"><div class="muted small">${S.page==='pin'?'ต้องใส่รหัสก่อนเข้าดู':roleName()+' · '+userName()}</div><h1>${PAGES[S.page]}</h1></div></div>${body}`;
   }
   // เก็บค่าที่กรอกค้างในแผ่นล่าง (sheet) ไม่ให้หายเมื่อหน้ารีเฟรช เช่น ตอนข้อความแจ้งเตือนหายไป
@@ -391,7 +400,7 @@ function viewHome(){
     const left=cnt(S.round,'pending')+cnt(S.round,'failed');
     return `${LIVE?'':`<div class="field"><label for="head-sel" class="muted small">ผู้ใช้งาน</label><select id="head-sel">${HEADS.map(x=>`<option value="${x.code}"${x.code===S.head?' selected':''}>${x.code} หัวหน้า${x.name} · ${x.zone}</option>`).join('')}</select></div>`}
     <div class="today"><div><b>${zr.length-cnt('am','pending')}/${zr.length}</b><span>รอบเช้า ตรวจแล้ว</span></div><div><b>${zr.length-cnt('pm','pending')}/${zr.length}</b><span>รอบบ่าย ตรวจแล้ว</span></div><div><b style="color:var(--bad)">${cnt('am','failed')+cnt('pm','failed')}</b><span>ไม่ผ่าน</span></div></div>
-    <div class="tiles">${tile('check',`${h.zone} · ${ROUNDS[S.round]}เหลือ ${left} ห้อง`,{primary:1,wide:1,badge:left||''})}
+    <div class="tiles">${tile('check',PASTV()?`${h.zone} · ดูผลตรวจ ${thShort(TODAY)}`:`${h.zone} · ${ROUNDS[S.round]}เหลือ ${left} ห้อง`,{primary:1,wide:1,badge:PASTV()?'':left||''})}
       ${tile('other',`งานประจำวัน/สัปดาห์/6 เดือน และงานพิเศษ พร้อมภาพ 2–4 ภาพ · วันนี้ ${OREC.filter(r=>r.head===h.name).length} รายการ`,{wide:1})}
       ${tile('supply',`รับเข้า เบิกจ่าย${low?` · ใกล้หมด ${low}`:''}`)}${tile('staff',`แม่บ้าน ${STAFF.length-HEADS.length} คน ใน ${FLOORS.length} ชั้น`)}</div>`;
   }
@@ -428,7 +437,7 @@ function viewCheck(){
       <div class="fhead"><div class="fl"><span class="floor">${f}</span><div><h3>ชั้น ${f}</h3><div class="muted small">ตรวจแล้ว ${fd}/${fr.length}${S.zoneOnly?'':`<br>โซนหัวหน้า${headOf(f).name}`}</div>${fd===fr.length?'<span class="chip c-passed" style="display:inline-block;margin-top:4px">ครบ</span>':''}</div></div>
         ${staffOn(f).length<=3?`<div class="fstaff"><span class="muted">ผู้รับผิดชอบ</span>${staffBlock(f)}</div>`:''}</div>
       ${staffOn(f).length>3?`<div class="fstaff wide"><span class="muted">ผู้รับผิดชอบ ${staffOn(f).length} คน</span><div class="fgrid">${staffBlock(f)}</div></div>`:''}
-      ${CHECKIN[ckey(S.round,f)]?selfieBox(S.round,f):`<div class="item isbad" style="border-style:dashed;gap:8px">
+      ${CHECKIN[ckey(S.round,f)]?selfieBox(S.round,f):PASTV()?`<div class="item small muted" style="border-style:dashed">ไม่มีเซลฟีเข้าชั้นใน${ROUNDS[S.round]}ของวันนี้</div>`:!canDo(f)?`<div class="item small muted" style="border-style:dashed">ชั้นนี้อยู่ในโซนหัวหน้า${esc(headOf(f).name)} · ดูได้อย่างเดียว</div>`:`<div class="item isbad" style="border-style:dashed;gap:8px">
         <div class="small"><b>ถ่ายเซลฟีเข้าชั้นก่อนตรวจ</b><br><span class="muted">ให้เห็นหน้าผู้ตรวจคู่กับหน้าห้องน้ำชั้น ${f} · ถ่าย 1 ครั้งต่อรอบ</span></div>
         <div class="photo"><label for="ck-${f}">🤳 เปิดกล้องหน้า<input id="ck-${f}" type="file" accept="image/*" capture="user" data-checkin="${f}"></label></div>
         ${S.ckErr&&S.ckErr.f===f?`<div class="err">${esc(S.ckErr.m)}</div>`:''}</div>`}
@@ -453,7 +462,7 @@ function todayStats(){
 }
 function mgrToday(){
   const s=todayStats();
-  const cell=(rd,r)=>{const x=REC[key(rd,r.id)];return `<td class="cell s-${x.status}" title="ชั้น ${r.floor} ${r.label} ${ROUNDS[rd]}: ${STLBL[x.status]}"></td>`};
+  const cell=(rd,r)=>{const x=REC[key(rd,r.id)];const t=x.status!=='pending';return `<td class="cell s-${x.status}${t?' tap':''}"${t?` data-act="vopen" data-v="${rd}|${r.id}"`:''} title="ชั้น ${r.floor} ${r.label} ${ROUNDS[rd]}: ${STLBL[x.status]}"></td>`};
   const rows=[...FLOORS].reverse().map(f=>{const rs=ROOMS.filter(r=>r.floor===f);return `<tr><td class="f">${f}</td>${rs.map(r=>cell('am',r)).join('')}<td class="sp"></td>${rs.map(r=>cell('pm',r)).join('')}</tr>`});
   return `
   <div class="kpis">
@@ -462,10 +471,10 @@ function mgrToday(){
     <div class="kpi"><span>ห้องไม่ผ่าน</span><b style="color:var(--bad)">${s.failed}</b></div>
     <div class="kpi"><span>ข้อที่ไม่ผ่าน</span><b style="color:var(--bad)">${s.issues.length}</b></div>
   </div>
-  <div class="panel"><div class="who"><h3>แผนผังรายชั้น</h3><span class="legend">${TYPES.map(([t,l])=>`<span style="display:inline-flex;align-items:center;gap:3px">${rIcon(t)}${l}</span>`).join('')}</span></div>
+  <div class="panel"><div class="who"><h3>แผนผังรายชั้น <span class="muted small" style="font-weight:400">· แตะช่องเพื่อดูภาพ</span></h3><span class="legend">${TYPES.map(([t,l])=>`<span style="display:inline-flex;align-items:center;gap:3px">${rIcon(t)}${l}</span>`).join('')}</span></div>
     <div class="gridwrap"><table class="fg"><thead><tr><th></th><th colspan="3">เช้า</th><th></th><th colspan="3">บ่าย</th></tr><tr><th></th>${TYPES.map(([t])=>`<th>${rIcon(t)}</th>`).join('')}<th></th>${TYPES.map(([t])=>`<th>${rIcon(t)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>
     <div class="legend"><span><i class="s-passed"></i>ผ่าน</span><span><i class="s-failed"></i>ไม่ผ่าน</span><span><i class="s-pending"></i>ยังไม่ตรวจ</span></div></div>
-  <div class="panel"><h3>ห้องที่ไม่ผ่าน (${s.fails.length})</h3><div class="list">${s.fails.map(i=>`<div class="row" style="cursor:default"><span class="floor" style="background:var(--bad-soft);color:var(--bad)">${i.room.floor}</span><span class="main"><span class="title">${i.room.label} · ${ROUNDS[i.rd]}</span>${i.issues.map(t=>`<br><span class="small"><b>${ITEMLBL[t.item]}</b> — ${esc(t.note)}</span>`).join('')}<br><span class="muted small">ผู้รับผิดชอบ: ${esc(staffNames(i.room.floor))}</span></span></div>`).join('')||'<div class="empty">ไม่มีห้องที่ไม่ผ่าน</div>'}</div></div>
+  <div class="panel"><h3>ห้องที่ไม่ผ่าน (${s.fails.length})</h3><div class="list">${s.fails.map(i=>`<button class="row" data-act="vopen" data-v="${i.rd}|${i.room.id}"><span class="floor" style="background:var(--bad-soft);color:var(--bad)">${i.room.floor}</span><span class="main"><span class="title">${i.room.label} · ${ROUNDS[i.rd]}</span>${i.issues.map(t=>`<br><span class="small"><b>${ITEMLBL[t.item]}</b> — ${esc(t.note)}</span>`).join('')}<br><span class="muted small">ผู้รับผิดชอบ: ${esc(staffNames(i.room.floor))}</span></span></button>`).join('')||'<div class="empty">ไม่มีห้องที่ไม่ผ่าน</div>'}</div></div>
   <div class="panel"><div class="who"><h3>ข้อความรายงาน</h3><button class="btn ghost small" data-act="copy" data-v="day">คัดลอกส่ง LINE</button></div><pre class="report" id="rep-day">${esc(dailyText(s))}</pre></div>`;
 }
 function dailyText(s){
@@ -671,7 +680,7 @@ function viewOther(){
       ${r.note?`<div class="small">${esc(r.note)}</div>`:''}
       <div class="ophotos">${r.photos.map(p=>p?`<img src="${p}" alt="ภาพประกอบ">`:'<span class="ph">ภาพ<br>(ตัวอย่าง)</span>').join('')}</div>
       <button class="btn ghost small" style="color:#06a34a" data-act="oline" data-v="${r.id}">ส่ง LINE</button></div>`;
-  const form=isSup?`<div class="panel">
+  const form=isSup&&!PASTV()?`<div class="panel">
     <h3>บันทึกงานใหม่</h3>
     <div class="field"><label for="o-task" class="muted small">ประเภทงาน</label><select id="o-task"><option value="">— เลือกงาน —</option>${OTASKS.map(([g,l])=>`<optgroup label="${g}">${l.map(([k,t])=>`<option value="${k}"${d.task===k?' selected':''}>${t}</option>`).join('')}</optgroup>`).join('')}</select></div>
     <div class="field"><label for="o-loc" class="muted small">พื้นที่</label><select id="o-loc"><option value="">— เลือกพื้นที่ —</option>${locs.map(l=>`<option${d.loc===l?' selected':''}>${l}</option>`).join('')}</select></div>
@@ -681,7 +690,7 @@ function viewOther(){
       ${d.photos.length<4?`<label class="opadd" for="o-ph">📷<br>เพิ่มภาพ<input id="o-ph" type="file" accept="image/*" capture="environment" data-ophoto="1"></label>`:''}</div></div>
     <div class="err" id="err">${esc(S.photoErr)}</div>
     <button class="btn" data-act="osave">บันทึกงาน</button></div>`:'';
-  return `${form}<div class="who"><h3>${isSup?'บันทึกของฉันวันนี้':'บันทึกงานอื่น ๆ วันนี้'} (${list.length})</h3></div>
+  return `${form}<div class="who"><h3>${isSup?'บันทึกของฉัน':'บันทึกงานอื่น ๆ '}${PASTV()?' วันที่ '+thShort(TODAY):'วันนี้'} (${list.length})</h3></div>
     <div class="list">${list.map(card).join('')||'<div class="empty">ยังไม่มีบันทึก</div>'}</div>`;
 }
 
@@ -779,7 +788,7 @@ function sheet(){
     <div class="item">${ITEMS.map(([k,l])=>`<div class="item-top"><span class="lbl small">${l}</span>${x.items[k]==='ok'?'<span class="chip c-passed">ผ่าน</span>':'<span class="chip c-failed">ไม่ผ่าน</span>'}</div>`).join('')}</div>
     ${x.issues.map(i=>`<div class="item isbad"><b class="small" style="color:var(--bad)">ไม่ผ่าน: ${ITEMLBL[i.item]}</b><div class="photo">${i.photo?`<img class="thumb" src="${i.photo}" alt="ภาพสิ่งผิดปกติ">`:`<span class="ph">ภาพตัวอย่าง</span>`}<span class="small">${esc(i.note)}</span></div></div>`).join('')}
     ${x.status==='failed'?lineButtons(rd,id):''}
-    <button class="btn ghost" data-act="recheck">ตรวจซ้ำ</button>`;
+    ${canDo(room.floor)?'<button class="btn ghost" data-act="recheck">ตรวจซ้ำ</button>':''}`;
   }
   return `<div class="scrim" data-act="close"></div><div class="sheet" role="dialog" aria-modal="true"><div class="sheet-in">${head}${inner}</div></div>`;
 }
@@ -800,7 +809,16 @@ async function save(){const d=S.draft;const {rd,id}=S.sheet;const now=new Date()
 // กรอก 2 ค่านี้หลังสร้าง Supabase Project แล้ว แอปจะเปลี่ยนจากข้อมูลตัวอย่างเป็นข้อมูลจริงทันที
 const CFG={url:'https://bqfkaahoicwbpjyujtjs.supabase.co', key:'sb_publishable_aPdKIXyMYRu9vSNJeN8Y6A_uyOHCrzp'};   // url: https://xxxx.supabase.co   key: anon public key
 const LIVE=!!(CFG.url&&CFG.key);
-let sb=null, ME_USER=null, BUSY=false;
+let sb=null, ME_USER=null, BUSY=false, REAL_TODAY='';
+const bkkRound=()=>Number(new Intl.DateTimeFormat('en-GB',{hour:'numeric',hour12:false,timeZone:'Asia/Bangkok'}).format(new Date()))<12?'am':'pm';
+// เลือกวันที่ดูข้อมูลย้อนหลัง (ตั้งแต่วันเริ่มสัญญา 1 ต.ค. 2569)
+const START_DATE='2026-10-01';
+const dateBar=()=>{if(!LIVE||!REAL_TODAY)return '';const p=PASTV();
+  return `<div class="datebar${p?' past':''}"><label for="view-date">📅 ดูวันที่</label><input id="view-date" type="date" value="${TODAY}" min="${START_DATE}" max="${REAL_TODAY}" aria-label="เลือกวันที่ต้องการดู">${p?'<button class="btn small" data-act="vtoday">กลับวันนี้</button>':''}</div>${S.loading?'<div class="muted small" style="margin-top:-6px">กำลังโหลดข้อมูล…</div>':p?`<div class="pastnote">ข้อมูลย้อนหลัง ${thShort(TODAY)} · ดูได้อย่างเดียว</div>`:''}`};
+async function reloadDay(){S.sheet=null;S.loading=true;render();
+  try{await loadLive()}catch(e){S.loading=false;toast('โหลดข้อมูลไม่สำเร็จ: '+dbErr(e));return}
+  S.loading=false;if(!S.viewDate)S.round=bkkRound();render()}
+let dateT;
 const headName=c=>(HEADS.find(h=>h.code===c)||{}).name||c||'';
 const thDate=d=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok'}).format(d);
 const hmTH=ts=>new Date(ts).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Bangkok'});
@@ -808,7 +826,7 @@ const thShort=iso=>{const [y,m,d]=iso.split('-').map(Number);return `${d} ${TH_M
 const dbErr=e=>String(e?.message||e||'เกิดข้อผิดพลาด');
 async function upPhoto(kind,dataUrl){
   const blob=await (await fetch(dataUrl)).blob();
-  const path=`${TODAY}/${kind}/${(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2))}.jpg`;
+  const path=`${REAL_TODAY||TODAY}/${kind}/${(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2))}.jpg`;
   const {error}=await sb.storage.from('photos').upload(path,blob,{contentType:'image/jpeg',upsert:false});
   if(error)throw new Error('อัปโหลดภาพไม่สำเร็จ: '+error.message);return path}
 async function signedUrls(paths){paths=[...new Set(paths.filter(Boolean))];const m={};
@@ -835,12 +853,13 @@ async function afterLogin(){
   const {data:{user}}=await sb.auth.getUser();
   const {data:p,error}=await sb.from('profiles').select('*').eq('user_id',user.id).maybeSingle();
   if(error||!p){await sb.auth.signOut();S.page='login';S.loginErr='บัญชีนี้ยังไม่ได้กำหนดสิทธิ์ใช้งาน กรุณาติดต่อผู้จัดการ';render();return}
-  ME_USER=p;S.round=Number(new Intl.DateTimeFormat('en-GB',{hour:'numeric',hour12:false,timeZone:'Asia/Bangkok'}).format(new Date()))<12?'am':'pm';S.role=p.role==='manager'?'mgr':'sup';S.mgrAuth=p.role==='manager';if(p.head_code)S.head=p.head_code;
-  S.page='home';S.loading=true;render();
+  ME_USER=p;S.round=bkkRound();S.role=p.role==='manager'?'mgr':'sup';S.mgrAuth=p.role==='manager';if(p.head_code)S.head=p.head_code;
+  S.page='home';S.viewDate=null;S.loading=true;render();
   try{await loadLive()}catch(e){S.loading=false;toast('โหลดข้อมูลไม่สำเร็จ: '+dbErr(e));return}
   S.loading=false;render()}
 async function loadLive(){
-  TODAY=thDate(new Date());
+  REAL_TODAY=thDate(new Date());if(S.viewDate&&S.viewDate>=REAL_TODAY)S.viewDate=null;
+  TODAY=S.viewDate||REAL_TODAY;
   for(const k in REC)delete REC[k];for(const r of ROOMS)for(const rd of ['am','pm'])REC[key(rd,r.id)]={status:'pending'};
   for(const k in CHECKIN)delete CHECKIN[k];OREC.length=0;TX.length=0;
   const [ck,ins,ow,sup,tx]=await Promise.all([
@@ -861,7 +880,7 @@ async function loadLive(){
 const liveHeadFor=f=>ME_USER&&ME_USER.role==='manager'?headOf(f).code:myHead().code;
 async function liveCheckin(f,dataUrl){const path=await upPhoto('checkin',dataUrl);
   const {error}=await sb.from('checkins').insert({round:S.round,floor:f,head_code:liveHeadFor(f),photo_path:path});
-  if(error)throw new Error(error.code==='23505'?`ชั้น ${f} รอบนี้มีเซลฟีแล้ว`:dbErr(error))}
+  if(error)throw new Error(error.code==='23505'?`ชั้น ${f} รอบนี้มีเซลฟีแล้ว`:(error.code==='42501'||/row-level security/i.test(error.message))?`ชั้น ${f} อยู่นอกโซนของคุณ บันทึกไม่ได้`:dbErr(error))}
 async function liveInspection(rd,id,d){const issues=[];
   for(const [k] of ITEMS)if(d.items[k]==='bad')issues.push({item:k,note:d.notes[k].trim(),photo:await upPhoto('issue',d.photos[k])});
   const {data,error}=await sb.rpc('save_inspection',{p_round:rd,p_room:id,p_items:d.items,p_issues:issues});
@@ -933,7 +952,11 @@ document.addEventListener('click',async e=>{
   else if(a==='round')S.round=v;
   else if(a==='zone')S.zoneOnly=v==='1';
   else if(a==='close'){S.sheet=null;S.failOpen=false}
+  else if(a==='vopen'){const [rd,id]=v.split('|');S.failOpen=false;S.sheet={mode:'view',rd,id}}
+  else if(a==='vtoday'){S.viewDate=null;reloadDay();return}
   else if(a==='open'){const x=REC[key(S.round,v)];S.failOpen=false;
+    if(PASTV()&&x.status==='pending'){toast(`ไม่มีผลตรวจห้องนี้ใน${ROUNDS[S.round]} วันที่ ${thShort(TODAY)}`);return}
+    if(!canDo(roomById[v].floor)&&(x.status==='pending'||x.status==='failed')&&!x.time){toast(`ชั้น ${roomById[v].floor} อยู่ในโซนหัวหน้า${headOf(roomById[v].floor).name} · ดูได้อย่างเดียว`);return}
     if(x.status==='pending'&&!CHECKIN[ckey(S.round,roomById[v].floor)]){toast(`ถ่ายเซลฟีเข้าชั้น ${roomById[v].floor} ก่อนเริ่มตรวจ`);return}
     if(x.status==='pending'){S.draft=newDraft();S.sheet={mode:'fill',rd:S.round,id:v}}else S.sheet={mode:'view',rd:S.round,id:v}}
   else if(a==='recheck'){S.draft=newDraft();S.sheet.mode='fill'}
@@ -949,7 +972,7 @@ document.addEventListener('click',async e=>{
     if(BUSY)return;
     if(LIVE){BUSY=true;try{await liveTx({supply_id:it.id,dir:out?'out':'in',qty:q,target:where,ref:ref||null,recorded_by:userName()})}catch(e){BUSY=false;return err('บันทึกไม่สำเร็จ: '+dbErr(e))}BUSY=false}
     const now=new Date();it.qty+=out?-q:q;
-    TX.unshift({id:++txSeq,date:TODAY,time:hhmm(now.getHours(),now.getMinutes()),dir:out?'out':'in',item:it.id,qty:q,by:userName(),to:where+(ref?` (${ref})`:'')});
+    TX.unshift({id:++txSeq,date:REAL_TODAY||TODAY,time:hhmm(now.getHours(),now.getMinutes()),dir:out?'out':'in',item:it.id,qty:q,by:userName(),to:where+(ref?` (${ref})`:'')});
     S.sheet=null;toast(out?'บันทึกเบิกจ่ายแล้ว':'รับเข้าคลังแล้ว');return}
   else if(a==='copy'){const el=document.getElementById('rep-'+v);
     try{await navigator.clipboard.writeText(el.textContent);toast('คัดลอกแล้ว')}catch(_){const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);toast('เลือกข้อความแล้ว กดคัดลอกได้เลย')}return}
@@ -957,6 +980,8 @@ document.addEventListener('click',async e=>{
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='pin'){e.preventDefault();tryPin()}});
 document.addEventListener('change',e=>{
+  if(e.target.id==='view-date'){const v=e.target.value;if(!v)return;clearTimeout(dateT);
+    dateT=setTimeout(()=>{const d=v>=REAL_TODAY?null:v<START_DATE?START_DATE:v;if(d===S.viewDate)return;S.viewDate=d;reloadDay()},350);return}
   if(e.target.id==='head-sel'){S.head=e.target.value;render();return}
   if(e.target.id==='kpi-zone'){S.kpiZone=e.target.value;render();return}
   if(e.target.dataset?.ophoto&&e.target.files?.[0]){const d=S.odraft;
