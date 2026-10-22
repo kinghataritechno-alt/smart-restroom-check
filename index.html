@@ -267,6 +267,20 @@ body.lg-bg #login-form label,body.lg-bg #login-form .muted{color:var(--ink)}
 body.lg-bg .co-bar{border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent)}
 .lg-hero{height:24vh;min-height:130px;display:flex;align-items:flex-end;justify-content:flex-end}
 .lg-hero span{font-size:13px;color:#fff;background:rgba(8,30,32,.45);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);padding:3px 10px;border-radius:999px}
+
+/* ===== รายงานการปฏิบัติงาน (หน้าแรกหลังเข้าสู่ระบบ) ===== */
+.ocards{display:flex;flex-direction:column;gap:8px}
+.ocard{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.ocard.bad{border-left-color:var(--bad)}.ocard.warn{border-left-color:var(--warn)}
+.oc-h{display:flex;align-items:center;gap:10px}.oc-h .num{margin-left:auto;font-weight:600;font-size:16px}
+.oc-h b{font-family:var(--f-display);font-size:17px}
+.oc-r{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:15.5px}
+.ochips{display:flex;flex-wrap:wrap;gap:6px}
+.ochip{font-size:14px;border-radius:99px;padding:2px 10px;background:var(--surface2);color:var(--muted);white-space:nowrap}
+.ochip.bad{background:var(--bad-soft);color:var(--bad)}.ochip.warn{background:var(--warn-soft);color:var(--warn)}.ochip.ok{background:var(--ok-soft);color:var(--ok)}
+.ozone{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:4px}
+.ozone h3{font-size:17px}
+.okline{font-size:14.5px;color:var(--muted)}
 </style>
 
 <div class="app" id="app"></div>
@@ -310,9 +324,9 @@ const STAFF=[
 const FLOORS=[...new Set(STAFF.filter(x=>x.floor).map(x=>x.floor))].sort((a,b)=>a-b);
 // หัวหน้าแม่บ้าน 3 คน แบ่งโซนตามชั้น (ยืนยันแล้ว)
 const HEADS=[
-  {code:'3001',name:'อุษา',zone:'ชั้น 1–10',has:f=>f<=10},
-  {code:'3002',name:'ลักษนี',zone:'ชั้น 11–20',has:f=>f>=11&&f<=20},
-  {code:'3003',name:'ปาริสา',zone:'ชั้น 21–30',has:f=>f>=21}];
+  {code:'3001',name:'อุษา',zone:'ชั้น 1–14',has:f=>f<=14},
+  {code:'3002',name:'ลักษนี',zone:'ชั้น 15–22',has:f=>f>=15&&f<=22},
+  {code:'3003',name:'ปาริสา',zone:'ชั้น 23–30',has:f=>f>=23}];
 const headOf=f=>HEADS.find(h=>h.has(f));
 const staffOn=f=>STAFF.filter(x=>x.floor===f);
 const staffNames=f=>staffOn(f).map(x=>x.first).join(', ');
@@ -387,12 +401,13 @@ const TX=[ // dir: in รับเข้า / out เบิกจ่าย · by
 ];
 
 // ================== state ==================
-const S={page:'home',role:'sup',head:'3002',mgrAuth:false,round:'pm',zoneOnly:true,mgrTab:'today',sheet:null,draft:null,failOpen:false,photoErr:'',ckErr:null,pinErr:'',toast:'',kpiPeriod:'month',kpiZone:null,odraft:null};
-const PAGES={check:'งานห้องน้ำ',daily:'รายงานประจำวัน',weekly:'รายงานประจำสัปดาห์',monthly:'สรุปประจำเดือน',supply:'รับ / เบิกอุปกรณ์',staff:'รายชื่อพนักงาน',kpi:'KPI พนักงาน',other:'งานอื่น ๆ',pin:'เข้าสู่ระบบผู้จัดการ'};
+const S={page:'ops',opsPeriod:'day',role:'sup',head:'3002',mgrAuth:false,round:'pm',zoneOnly:true,mgrTab:'today',sheet:null,draft:null,failOpen:false,photoErr:'',ckErr:null,pinErr:'',toast:'',kpiPeriod:'month',kpiZone:null,odraft:null};
+const PAGES={ops:'รายงานการปฏิบัติงาน',check:'งานห้องน้ำ',daily:'รายงานประจำวัน',weekly:'รายงานประจำสัปดาห์',monthly:'สรุปประจำเดือน',supply:'รับ / เบิกอุปกรณ์',staff:'รายชื่อพนักงาน',kpi:'KPI พนักงาน',other:'งานอื่น ๆ',pin:'เข้าสู่ระบบผู้จัดการ'};
 const myHead=()=>HEADS.find(h=>h.code===S.head);
-const userName=()=>S.role==='mgr'?'ผู้จัดการอาคาร':'หัวหน้า'+myHead().name;
+const userName=()=>S.role==='mgr'?((typeof ME_USER!=='undefined'&&ME_USER?.display_name)||'ผู้จัดการอาคาร'):'หัวหน้า'+myHead().name;
 const roleName=()=>S.role==='mgr'?'ผู้จัดการ':'หัวหน้าแม่บ้าน';
 const ICON={
+  ops:'<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
   check:'<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',
   daily:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M9 15h6"/>',
   weekly:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
@@ -416,13 +431,13 @@ const staffBlock=f=>staffOn(f).map(x=>`<div><span class="num muted">${x.code}</s
 function render(){
   let html;
   if(S.page==='login'){html=viewLogin()}
-  else if(S.page==='home'){
+  else if(S.page==='home'||S.page==='ops'){
     html=`<div class="co-bar"><span class="co-logo"><img src="${LOGO}" alt="โลโก้ Smart Terminal"></span><span class="co-name"><b>Smart Terminal</b><small>SMART TERMINAL CORPORATION CO.,LTD.</small></span>${themeBtn()}</div>
     <div class="top"><div class="brand"><small>งานบริหารอาคารสำนักงานงบประมาณ/งานทำความสะอาด</small><h1>Smart Restroom Check</h1><div class="today-line" id="today-line">${todayLine()}</div></div>${LIVE?'':'<span class="sample">ข้อมูลตัวอย่าง</span>'}</div>
     ${LIVE?liveBar()+dateBar():`<div class="seg two" role="group" aria-label="เลือกผู้ใช้งาน">
       <button data-act="role" data-v="sup" aria-pressed="${S.role==='sup'}">หัวหน้าแม่บ้าน</button>
       <button data-act="role" data-v="mgr" aria-pressed="${S.role==='mgr'}">ผู้จัดการ${S.mgrAuth?'':' 🔒'}</button></div>`}
-    ${viewHome()}`;
+    ${S.page==='ops'?viewOps():viewHome()}`;
   } else {
     const body=(['check','daily','other'].includes(S.page)?dateBar():'')+(LIVE&&['weekly','monthly','kpi'].includes(S.page)?liveNotice:'')+{check:viewCheck,daily:mgrToday,weekly:viewWeekly,monthly:mgrMonth,supply:viewSupply,staff:viewStaff,kpi:viewKpi,other:viewOther,pin:viewPin}[S.page]();
     html=`<div class="nav"><button class="back" data-act="home" aria-label="กลับหน้าแรก"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>หน้าแรก</button><div class="nav-t"><div class="muted small">${S.page==='pin'?'ต้องใส่รหัสก่อนเข้าดู':roleName()+' · '+userName()}</div><h1>${PAGES[S.page]}</h1></div></div>${body}`;
@@ -451,13 +466,13 @@ function viewHome(){
     const left=cnt(S.round,'pending')+cnt(S.round,'failed');
     return `${LIVE?'':`<div class="field"><label for="head-sel" class="muted small">ผู้ใช้งาน</label><select id="head-sel">${HEADS.map(x=>`<option value="${x.code}"${x.code===S.head?' selected':''}>${x.code} หัวหน้า${x.name} · ${x.zone}</option>`).join('')}</select></div>`}
     <div class="today"><div><b>${zr.length-cnt('am','pending')}/${zr.length}</b><span>รอบเช้า ตรวจแล้ว</span></div><div><b>${zr.length-cnt('pm','pending')}/${zr.length}</b><span>รอบบ่าย ตรวจแล้ว</span></div><div><b style="color:var(--bad)">${cnt('am','failed')+cnt('pm','failed')}</b><span>ไม่ผ่าน</span></div></div>
-    <div class="tiles">${tile('check',PASTV()?`${h.zone} · ดูผลตรวจ ${thShort(TODAY)}`:`${h.zone} · ${ROUNDS[S.round]}เหลือ ${left} ห้อง`,{primary:1,wide:1,badge:PASTV()?'':left||''})}
+    <div class="tiles">${tile('ops','ชั้นที่ไม่ได้เข้าตรวจ / ค้างตรวจ · รายวัน สัปดาห์ เดือน',{wide:1})}${tile('check',PASTV()?`${h.zone} · ดูผลตรวจ ${thShort(TODAY)}`:`${h.zone} · ${ROUNDS[S.round]}เหลือ ${left} ห้อง`,{primary:1,wide:1,badge:PASTV()?'':left||''})}
       ${tile('other',`งานประจำวัน/สัปดาห์/6 เดือน และงานพิเศษ พร้อมภาพ 2–4 ภาพ · วันนี้ ${OREC.filter(r=>r.head===h.name).length} รายการ`,{wide:1})}
       ${tile('supply',`รับเข้า เบิกจ่าย${low?` · ใกล้หมด ${low}`:''}`)}${tile('staff',`แม่บ้าน ${STAFF.length-HEADS.length} คน ใน ${FLOORS.length} ชั้น`)}</div>`;
   }
-  return `<div class="who"><div><h2>สวัสดี ผู้จัดการอาคาร</h2><div class="muted small">${thShort(TODAY)} · ${ROOMS.length} ห้อง × 2 รอบ</div></div><button class="btn ghost small" data-act="logout">ออกจากระบบ</button></div>
+  return `<div class="who"><div><h2>สวัสดี ${esc(userName())}</h2><div class="muted small">${thShort(TODAY)} · ${ROOMS.length} ห้อง × 2 รอบ</div></div><button class="btn ghost small" data-act="logout">ออกจากระบบ</button></div>
     <div class="today"><div><b>${pct(s.done,s.total)}%</b><span>ตรวจแล้ว</span></div><div><b style="color:var(--ok)">${pct(s.passed,s.done)}%</b><span>ผ่าน</span></div><div><b style="color:var(--bad)">${s.failed}</b><span>ไม่ผ่าน</span></div></div>
-    <div class="tiles">${tile('daily','แผนผังรายชั้น ห้องไม่ผ่าน ส่ง LINE',{primary:1,wide:1,badge:s.failed||''})}
+    <div class="tiles">${tile('ops','ชั้นที่ไม่ได้เข้าตรวจ / ค้างตรวจ · รายวัน สัปดาห์ เดือน',{wide:1})}${tile('daily','แผนผังรายชั้น ห้องไม่ผ่าน ส่ง LINE',{primary:1,wide:1,badge:s.failed||''})}
       ${tile('weekly','สรุป จ.–ศ. 5–9 ต.ค.')}${tile('monthly','ประกอบรายงานข้อ 6.4.10')}
       ${tile('supply',`คงคลัง ประวัติรับ-เบิก${low?` · ใกล้หมด ${low}`:''}`)}${tile('staff',`${STAFF.length} คน · หัวหน้า ${HEADS.length}`)}
       ${tile('kpi','อันดับ เกรด และผู้ที่ต้องติดตาม · แม่บ้าน 50 คน + หัวหน้า 3 คน',{wide:1})}
@@ -592,6 +607,96 @@ async function printDaily(){
   S.toast='';render();
   const t=document.title;document.title='รายงานประจำวัน '+TODAY;
   setTimeout(()=>{window.print();setTimeout(()=>{document.title=t},1500)},150)}
+
+// ================== รายงานการปฏิบัติงาน (หน้าแรกหลังเข้าสู่ระบบ · ทุกคนเห็นเหมือนกัน) ==================
+const OPS={key:'',data:null,first:undefined,at:null,loading:false,err:''};
+const addDays=(iso,n)=>{const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+const dow=iso=>new Date(iso+'T12:00:00Z').getUTCDay();
+const isWork=iso=>{const w=dow(iso);return w>=1&&w<=5};
+const DOWS=['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+const nowDate=()=>LIVE?thDate(new Date()):TODAY;
+const nowHour=()=>LIVE?Number(new Intl.DateTimeFormat('en-GB',{hour:'numeric',hour12:false,timeZone:'Asia/Bangkok'}).format(new Date())):14;
+function opsRange(){const base=(LIVE?TODAY:TODAY);const p=S.opsPeriod||'day';
+  if(p==='day')return {from:base,to:base,p};
+  if(p==='week'){const from=addDays(base,-((dow(base)+6)%7));return {from,to:addDays(from,6),p}}
+  const nm=new Date(Date.UTC(+base.slice(0,4),+base.slice(5,7),0)).getUTCDate();
+  return {from:base.slice(0,8)+'01',to:base.slice(0,8)+String(nm).padStart(2,'0'),p}}
+// รอบที่ "ถึงกำหนด" แล้ว: วันทำการ จ.–ศ. ตั้งแต่วันเริ่มใช้ระบบ · วันนี้ รอบเช้านับหลัง 12:00 น. รอบบ่ายนับหลัง 17:00 น.
+function dueRounds(d){const nd=nowDate();if(d>nd||d<START_DATE||(OPS.first&&d<OPS.first)||!isWork(d))return [];
+  if(d<nd)return ['am','pm'];const h=nowHour();return h>=17?['am','pm']:h>=12?['am']:[]}
+function buildOps(rooms,cks){const C={};const g=(d,rd,f)=>C[d+'|'+rd+'|'+f]||(C[d+'|'+rd+'|'+f]={n:0,open:0,ck:false});
+  rooms.forEach(x=>{const c=g(x.d,x.rd,x.f);c.n++;if(x.st==='failed')c.open++});cks.forEach(x=>{g(x.d,x.rd,x.f).ck=true});return C}
+function demoOps(r){const rooms=[],cks=[];const end=r.to<TODAY?r.to:TODAY;
+  for(let dd=r.from;dd<=end;dd=addDays(dd,1)){
+    if(dd===TODAY){for(const x of ROOMS)for(const rd of ['am','pm']){const y=REC[key(rd,x.id)];if(y.status!=='pending')rooms.push({d:dd,rd,f:x.floor,st:y.status})}
+      for(const k in CHECKIN){const [,rd,f]=k.split('|');cks.push({d:dd,rd,f:+f})}continue}
+    if(!isWork(dd))continue;let z=7;for(const c of dd)z=(z*31+c.charCodeAt(0))%2147483647;const R=()=>{z=(z*16807)%2147483647;return z/2147483647};
+    for(const f of FLOORS)for(const rd of ['am','pm']){const x=R();if(x<.025)continue;cks.push({d:dd,rd,f});
+      for(const t of ['M','F','D']){if(x<.05&&t==='D')continue;rooms.push({d:dd,rd,f,st:R()<.015?'failed':'passed'})}}}
+  return buildOps(rooms,cks)}
+async function pageAll(q){let out=[];for(let i=0;;i+=1000){const {data,error}=await q().range(i,i+999);if(error)throw error;out=out.concat(data||[]);if(!data||data.length<1000)break}return out}
+async function loadOps(force){const r=opsRange();const k=r.from+'|'+r.to;if(OPS.loading||(!force&&OPS.key===k&&OPS.data))return;
+  OPS.loading=true;OPS.err='';
+  try{
+    if(LIVE){
+      if(OPS.first===undefined){const [a,b]=await Promise.all([sb.from('checkins').select('work_date').order('work_date').limit(1),sb.from('inspections').select('work_date').order('work_date').limit(1)]);
+        OPS.first=[a.data?.[0]?.work_date,b.data?.[0]?.work_date].filter(Boolean).sort()[0]||null}
+      const [st,ck]=await Promise.all([
+        pageAll(()=>sb.from('v_room_status').select('work_date,round,room_id,floor,latest_status').gte('work_date',r.from).lte('work_date',r.to).order('work_date').order('room_id').order('round')),
+        pageAll(()=>sb.from('checkins').select('work_date,round,floor').gte('work_date',r.from).lte('work_date',r.to).order('work_date').order('floor').order('round'))]);
+      OPS.data=buildOps(st.map(x=>({d:x.work_date,rd:x.round,f:x.floor,st:x.latest_status})),ck.map(x=>({d:x.work_date,rd:x.round,f:x.floor})));
+    } else OPS.data=demoOps(r);
+    OPS.key=k;OPS.at=new Date();
+  }catch(e){OPS.err=dbErr(e)}
+  OPS.loading=false;render()}
+function opsCalc(r){const C=OPS.data,nd=nowDate(),end=r.to<nd?r.to:nd,days=[];
+  for(let d=r.from;d<=end;d=addDays(d,1))days.push(d);
+  return FLOORS.map(f=>{const nR=ROOMS.filter(x=>x.floor===f).length;const a={f,nR,dueRooms:0,doneRooms:0,miss:[],part:[],open:0,rd:{}};
+    for(const d of days){const due=dueRounds(d);for(const rd of ['am','pm']){const c=C[d+'|'+rd+'|'+f]||{n:0,open:0,ck:false};a.open+=c.open;
+      if(r.p==='day')a.rd[rd]={...c,due:due.includes(rd)};
+      if(!due.includes(rd))continue;a.dueRooms+=nR;a.doneRooms+=Math.min(c.n,nR);
+      if(c.n===0)a.miss.push({d,rd});else if(c.n<nR)a.part.push({d,rd,n:c.n})}}
+    a.bad=a.miss.length+a.part.length+a.open;return a})}
+const dShort=d=>`${DOWS[dow(d)]} ${+d.slice(8)}`;
+function viewOps(){const r=opsRange();const k=r.from+'|'+r.to;
+  if(OPS.key!==k&&!OPS.loading&&!OPS.err)setTimeout(()=>loadOps(),0);
+  const seg=`<div class="seg" role="group" aria-label="ช่วงเวลา">${[['day','รายวัน'],['week','รายสัปดาห์'],['month','รายเดือน']].map(([v,l])=>`<button data-act="operiod" data-v="${v}" aria-pressed="${r.p===v}">${l}</button>`).join('')}</div>`;
+  const menu=`<button class="btn" data-act="home">เข้าสู่เมนูงาน →</button>`;
+  if(OPS.err)return menu+seg+`<div class="warnbox">โหลดรายงานไม่สำเร็จ: ${esc(OPS.err)}</div><button class="btn ghost" data-act="oprefresh">ลองใหม่</button>`;
+  if(OPS.key!==k||!OPS.data)return menu+seg+`<div class="panel muted small">กำลังโหลดรายงาน…</div>`;
+  const A=opsCalc(r);const sum=(fn)=>A.reduce((t,a)=>t+fn(a),0);
+  const dueRooms=sum(a=>a.dueRooms),doneRooms=sum(a=>a.doneRooms),miss=sum(a=>a.miss.length),part=sum(a=>a.part.length),open=sum(a=>a.open);
+  const [y,m]=r.from.split('-').map(Number);
+  const plabel=r.p==='day'?new Date(r.from+'T12:00:00+07:00').toLocaleDateString('th-TH',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Bangkok'})
+    :r.p==='week'?`สัปดาห์ ${+r.from.slice(8)} ${TH_MON[+r.from.slice(5,7)-1]} – ${+r.to.slice(8)} ${TH_MON[+r.to.slice(5,7)-1]} ${+r.to.slice(0,4)+543}`
+    :`${['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'][m-1]} ${y+543}`;
+  const h=nowHour(),isToday=r.from<=nowDate()&&nowDate()<=r.to;
+  const note=`นับเฉพาะวันจันทร์–ศุกร์${OPS.first?` ตั้งแต่วันเริ่มใช้ระบบ ${thShort(OPS.first)}`:''}${isToday?` · วันนี้นับรอบเช้าหลัง 12:00 น. และรอบบ่ายหลัง 17:00 น.${h<12?' (ยังไม่ถึงกำหนด)':''}`:''}`;
+  const kp=`<div class="kpis">
+    <div class="kpi"><span>ความครบถ้วนการตรวจ</span><b>${dueRooms?pct(doneRooms,dueRooms)+'%':'–'}</b><div class="bar"><i style="width:${dueRooms?pct(doneRooms,dueRooms):0}%;background:var(--ok)"></i></div><div class="muted small">${doneRooms}/${dueRooms} ห้อง-รอบ</div></div>
+    <div class="kpi"><span>ไม่ได้เข้าตรวจ</span><b style="color:${miss?'var(--bad)':'var(--ok)'}">${miss}</b><div class="muted small">ชั้น-รอบ</div></div>
+    <div class="kpi"><span>ตรวจไม่ครบห้อง</span><b style="color:${part?'var(--warn)':'var(--ok)'}">${part}</b><div class="muted small">ชั้น-รอบ</div></div>
+    <div class="kpi"><span>ค้างแก้ (ไม่ผ่าน ยังไม่ตรวจซ้ำ)</span><b style="color:${open?'var(--bad)':'var(--ok)'}">${open}</b><div class="muted small">ห้อง</div></div></div>`;
+  const rdState=(c,nR)=>{if(c.n===0)return c.due?'<span class="ochip bad">ไม่ได้เข้าตรวจ</span>':'<span class="ochip">รอตรวจ</span>';
+    const t=c.n<nR?`<span class="ochip ${c.due?'warn':''}">${c.due?'ตรวจไม่ครบ':'กำลังตรวจ'} ${c.n}/${nR}</span>`:'<span class="ochip ok">ครบ</span>';
+    return t+(c.open?` <span class="ochip bad">ค้างแก้ ${c.open}</span>`:'')};
+  const card=a=>{const cls=a.miss.length?'bad':'warn';const p=a.dueRooms?pct(a.doneRooms,a.dueRooms)+'%':'';
+    let body;
+    if(r.p==='day')body=['am','pm'].map(rd=>`<div class="oc-r"><span class="muted">${ROUNDS[rd]}</span><span class="ochips">${rdState(a.rd[rd],a.nR)}</span></div>`).join('');
+    else{const ev=[...a.miss.map(x=>({...x,t:'ไม่ได้ตรวจ'})),...a.part.map(x=>({...x,t:`${x.n}/${a.nR}`}))].sort((p,q)=>(p.d+p.rd).localeCompare(q.d+q.rd));
+      body=`<div class="ochips">${a.miss.length?`<span class="ochip bad">ไม่ได้เข้าตรวจ ${a.miss.length} รอบ</span>`:''}${a.part.length?`<span class="ochip warn">ตรวจไม่ครบ ${a.part.length} รอบ</span>`:''}${a.open?`<span class="ochip bad">ค้างแก้ ${a.open} ห้อง</span>`:''}</div>
+      ${ev.length?`<div class="muted small">${ev.slice(0,8).map(x=>`${dShort(x.d)} ${x.rd==='am'?'เช้า':'บ่าย'}${x.t==='ไม่ได้ตรวจ'?'':' ('+x.t+')'}`).join(' · ')}${ev.length>8?` · +อีก ${ev.length-8}`:''}</div>`:''}`}
+    return `<div class="ocard ${cls}"><div class="oc-h"><span class="floor">${a.f}</span><div><b>ชั้น ${a.f}</b><div class="muted small">${esc(staffNames(a.f))}</div></div><span class="num">${p}</span></div>${body}</div>`};
+  const zones=HEADS.map(hd=>{const Z=A.filter(a=>hd.has(a.f));const zd=Z.reduce((t,a)=>t+a.dueRooms,0),zc=Z.reduce((t,a)=>t+a.doneRooms,0);
+    const bad=Z.filter(a=>a.bad),ok=Z.filter(a=>!a.bad);
+    return `<div class="ozone"><h3>หัวหน้า${esc(hd.name)} · ${hd.zone}</h3><span class="num muted">${zd?pct(zc,zd)+'%':'–'}</span></div>
+      ${bad.length?`<div class="ocards">${bad.map(card).join('')}</div>`:'<div class="okbox">ทุกชั้นในโซนนี้ตรวจครบ ไม่มีงานค้าง</div>'}
+      ${bad.length&&ok.length?`<div class="okline">✓ ครบ ไม่มีค้าง: ชั้น ${ok.map(a=>a.f).join(', ')}</div>`:''}`}).join('');
+  const upd=OPS.at?OPS.at.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false}):'';
+  return `${menu}${seg}
+    <div class="who"><div><h2>${plabel}</h2><div class="muted small">${note}</div></div><button class="btn ghost small" data-act="oprefresh"${OPS.loading?' disabled':''}>${OPS.loading?'กำลังโหลด…':'↻ '+upd}</button></div>
+    ${kp}${zones}
+    <div class="muted small">ชั้น 3–8 (ชั้นจอดรถ) และชั้น B1–B3 ไม่มีห้องน้ำให้ตรวจ จึงไม่อยู่ในรายงานนี้</div>`}
 function dailyText(s){
   const byItem={};s.issues.forEach(i=>byItem[i.item]=(byItem[i.item]||0)+1);
   return `รายงานผลตรวจห้องน้ำ ประจำวันที่ ${thShort(TODAY)}
@@ -787,7 +892,7 @@ function viewOther(){
   const isSup=S.role==='sup';const h=isSup?myHead():null;
   if(isSup&&!S.odraft)S.odraft=newODraft();
   const d=S.odraft;
-  const locs=isSup?[...FLOORS.filter(h.has).map(f=>'ชั้น '+f),'จุดส่วนกลาง','ลานจอดรถ ชั้น 3–8','ภายนอกอาคาร']:[];
+  const locs=isSup?[...FLOORS.filter(h.has).map(f=>'ชั้น '+f),'ชั้น B1','ชั้น B2','ชั้น B3','จุดส่วนกลาง','ลานจอดรถ ชั้น 3–8','ภายนอกอาคาร']:[];
   const list=OREC.filter(r=>!isSup||r.head===h.name);
   const card=r=>`<div class="item" style="gap:8px">
       <div class="item-top"><b class="lbl">${esc(OTLBL[r.task])}</b><span class="chip c-pending">${OTGRP[r.task]}</span></div>
@@ -934,7 +1039,7 @@ const dateBar=()=>{if(!LIVE||!REAL_TODAY)return '';const p=PASTV();
   return `<div class="datebar${p?' past':''}"><label for="view-date">📅 ดูวันที่</label><input id="view-date" type="date" value="${TODAY}" min="${START_DATE}" max="${REAL_TODAY}" aria-label="เลือกวันที่ต้องการดู">${p?'<button class="btn small" data-act="vtoday">กลับวันนี้</button>':''}</div>${S.loading?'<div class="muted small" style="margin-top:-6px">กำลังโหลดข้อมูล…</div>':p?`<div class="pastnote">ข้อมูลย้อนหลัง ${thShort(TODAY)} · ดูได้อย่างเดียว</div>`:''}`};
 async function reloadDay(){S.sheet=null;S.loading=true;render();
   try{await loadLive()}catch(e){S.loading=false;toast('โหลดข้อมูลไม่สำเร็จ: '+dbErr(e));return}
-  S.loading=false;if(!S.viewDate)S.round=bkkRound();render()}
+  S.loading=false;if(!S.viewDate)S.round=bkkRound();OPS.key='';render()}
 let dateT;
 const headName=c=>(HEADS.find(h=>h.code===c)||{}).name||c||'';
 const thDate=d=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok'}).format(d);
@@ -971,7 +1076,7 @@ async function afterLogin(){
   const {data:p,error}=await sb.from('profiles').select('*').eq('user_id',user.id).maybeSingle();
   if(error||!p){await sb.auth.signOut();S.page='login';S.loginErr='บัญชีนี้ยังไม่ได้กำหนดสิทธิ์ใช้งาน กรุณาติดต่อผู้จัดการ';render();return}
   ME_USER=p;S.round=bkkRound();S.role=p.role==='manager'?'mgr':'sup';S.mgrAuth=p.role==='manager';if(p.head_code)S.head=p.head_code;
-  S.page='home';S.viewDate=null;S.loading=true;render();
+  S.page='ops';S.viewDate=null;OPS.key='';S.loading=true;render();
   try{await loadLive()}catch(e){S.loading=false;toast('โหลดข้อมูลไม่สำเร็จ: '+dbErr(e));return}
   S.loading=false;render()}
 async function loadLive(){
@@ -1009,7 +1114,7 @@ async function liveTx(row){const {error}=await sb.from('supply_tx').insert(row);
 // ผู้ใช้ล็อกอินด้วยชื่อ-สกุล (ระบบแปลงเป็นบัญชี <รหัส>@smartterminal.co.th ให้เอง)
 const LOGIN_USERS=[
   {name:'อุษา มามาศ',code:'3001'},{name:'ลักษนี แทนเทือก',code:'3002'},{name:'ปาริสา ผลพุฒ',code:'3003'},
-  {name:'ผู้จัดการอาคาร',code:'manager'}];
+  {name:'ผู้จัดการอาคาร',code:'manager'},{name:'admin',code:'admin',hidden:1}];
 const normName=t=>String(t||'').replace(/^(หัวหน้า|คุณ|นาง(สาว)?|นาย)/,'').replace(/\s+/g,'').toLowerCase();
 const findLoginUser=t=>{const n=normName(t);if(!n)return null;
   return LOGIN_USERS.find(u=>normName(u.name)===n||u.code===n)||LOGIN_USERS.find(u=>normName(u.name.split(' ')[0])===n)||null};
@@ -1020,7 +1125,7 @@ function viewLogin(){
   <form class="panel" id="login-form" style="gap:12px">
     <h2>เข้าสู่ระบบ</h2>
     <div class="field"><label for="lg-email" class="muted small">ชื่อผู้ใช้ (ชื่อ-สกุล)</label><input id="lg-email" type="text" list="lg-users" autocomplete="username" placeholder="เช่น ลักษนี แทนเทือก" required value="${esc(S.loginEmail||'')}">
-      <datalist id="lg-users">${LOGIN_USERS.map(u=>`<option value="${u.name}">`).join('')}</datalist></div>
+      <datalist id="lg-users">${LOGIN_USERS.filter(u=>!u.hidden).map(u=>`<option value="${u.name}">`).join('')}</datalist></div>
     <div class="field"><label for="lg-pass" class="muted small">รหัสผ่าน</label><input id="lg-pass" type="password" autocomplete="current-password" placeholder="รหัสพนักงาน + 2569" required></div>
     <div class="err" id="err">${esc(S.loginErr||'')}</div>
     <button class="btn" type="submit"${BUSY?' disabled':''}>${BUSY?'กำลังเข้าสู่ระบบ…':'เข้าสู่ระบบ'}</button>
@@ -1054,7 +1159,9 @@ document.addEventListener('click',async e=>{
   else if(a==='pinok'){tryPin();return}
   else if(a==='logout'){if(LIVE){await sb.auth.signOut();ME_USER=null;S.page='login';render();return}S.mgrAuth=false;S.role='sup';toast('ออกจากระบบผู้จัดการแล้ว');return}
   else if(a==='signout'){await sb.auth.signOut();ME_USER=null;S.page='login';S.sheet=null;render();return}
-  else if(a==='go'){S.page=v;if(v==='kpi')S.kpiZone=null;scrollTo(0,0)}
+  else if(a==='operiod'){S.opsPeriod=v;OPS.err=''}
+  else if(a==='oprefresh'){OPS.err='';OPS.key='';loadOps(true);return}
+  else if(a==='go'){S.page=v;if(v==='ops'){OPS.key='';OPS.err=''}if(v==='kpi')S.kpiZone=null;scrollTo(0,0)}
   else if(a==='theme'){const t=curTheme()==='dark'?'light':'dark';applyTheme(t);try{localStorage.setItem(THEME_KEY,t)}catch(_){}}
   else if(a==='kperiod')S.kpiPeriod=v;
   else if(a==='odel'){S.odraft.photos.splice(Number(v),1)}
@@ -1130,7 +1237,7 @@ function stampPhoto(file,ctx){return new Promise((res,rej)=>{
     const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.drawImage(src,0,0,w,h);done&&done();
     const t=new Date(lm>0?lm:Date.now());const hd=myHead();
     const lines=[`${t.getDate()} ${TH_MON[t.getMonth()]} ${t.getFullYear()+543}  ${hhmm(t.getHours(),t.getMinutes())}:${String(t.getSeconds()).padStart(2,'0')} น.`,
-      `${ctx.loc||('ชั้น '+ctx.floor)} · ${ctx.place}${ctx.rd?' · '+ROUNDS[ctx.rd]:''}`,`${ctx.what}`,`ผู้ตรวจ: หัวหน้า${hd.name} (${hd.code}) · SmartTerminal`];
+      `${ctx.loc||('ชั้น '+ctx.floor)} · ${ctx.place}${ctx.rd?' · '+ROUNDS[ctx.rd]:''}`,`${ctx.what}`,`ผู้ตรวจ: ${S.role==='mgr'?userName():'หัวหน้า'+hd.name+' ('+hd.code+')'} · SmartTerminal`];
     const fs=Math.max(14,Math.round(w/30)),lh=Math.round(fs*1.35),pad=Math.round(fs*.6),bh=lines.length*lh+pad*2;
     g.fillStyle='rgba(8,30,32,.72)';g.fillRect(0,h-bh,w,bh);g.fillStyle='#ffffff';g.textBaseline='top';
     lines.forEach((l,i)=>{g.font=`${i===0?'600 ':''}${fs}px "IBM Plex Sans Thai",sans-serif`;g.fillText(l,pad,h-bh+pad+i*lh,w-pad*2)});
